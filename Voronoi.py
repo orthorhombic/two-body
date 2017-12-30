@@ -130,7 +130,10 @@ def voronoi_finite_polygons_2d(vor, radius=None):
             if v1 >= 0:
                 # finite ridge: already in the region
                 continue
-
+            if (v1 < 0 and v2 <0):
+                # not real ridge: skip
+                print ('continue',  (p2, v1, v2))
+                continue
             # Compute the missing endpoint of an infinite ridge
 
             t = vor.points[p2] - vor.points[p1] # tangent vector
@@ -158,16 +161,6 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     return new_regions, np.asarray(new_vertices)
 
 
-imagery = OSM() # Use Open street maps data
-ax = plt.axes(projection=imagery.crs)
-ax.set_extent([-78, -74, 38, 41], ccrs.Geodetic()) #longitude, latitude (x1,x2,y1,y2)
-#note: later, use the max/min lat/lon from calculated grid to set this
-
-
-# Add the imagery to the map. Later iterations will need to intellegently determine zoom level
-#ax.add_image(imagery, 5) #too low resolution
-ax.add_image(imagery, 7) #good
-#ax.add_image(imagery, 8) #too high resolution
 
 
 imagery = OSM() # Use Open street maps data
@@ -332,7 +325,8 @@ points=dfGrid.loc[:,['CorrLon','CorrLat']]
 vor = Voronoi(points)
 
 
-new_regions, new_vertices = voronoi_finite_polygons_2d(vor, spacing[1]/2)
+new_regions, new_vertices = voronoi_finite_polygons_2d(vor, spacing[1])
+
 
 cmap = matplotlib.cm.get_cmap('Spectral')
 
@@ -358,16 +352,50 @@ for i in range(len(dfGrid)): #Index of the Voronoi region for each input point
     aTempVert=new_regions[vor.point_region[i]] #Region vertices (indices)
     dfGrid.at[i,'Vertices']=new_vertices[aTempVert]
     dfGrid.at[i,'Shape']=shapely.geometry.Polygon(dfGrid.at[i,'Vertices'])
+    #need to properly orient polygons and ensure CCW orientation of points for filled area
+    dfGrid.at[i,'Shape']=shapely.geometry.polygon.orient(dfGrid.at[i,'Shape'], sign=1.0)
     dfGrid.at[i,'Color']=cmap(dfGrid.loc[i,'Value'],alpha=0.25)
 
 
 
-for i in range(len(dfGrid)-1):
-    print(i)
-    ax.add_geometries([dfGrid.at[i,'Shape']], ccrs.Geodetic(),
-              facecolor=[0,0,0,0], edgecolor='black')
+#for i in range(len(dfGrid)):
+#    print(i)
+#    ax.add_geometries([dfGrid.at[i,'Shape']], ccrs.Geodetic(),
+#              facecolor=[0,0,0,0], edgecolor='black')
+#
+#
+#for i in [40]:
+#    print(i)
+#    ax.add_geometries([dfGrid.at[i,'Shape']], crs=ccrs.Mercator,
+#              facecolor=[0,0,0,0], edgecolor='red')
+#
+#for i in [45]:
+#    print(i)
+#    ax.add_geometries([dfGrid.at[i,'Shape']], crs=ccrs.PlateCarree(),
+#              facecolor=[0,0,0,0], edgecolor='red')
+
+    ax.add_geometries(np.array(dfGrid.loc[:,'Shape']), ccrs.Geodetic(),
+              facecolor=np.array(dfGrid.loc[:,'Color']), edgecolor=None)
 
 
+i=0
+print (i)
+ax.add_geometries([dfGrid.loc[i,'Shape']], ccrs.Geodetic(),
+          facecolor=[dfGrid.loc[i,'Color']], edgecolor=None)
+i+=1
 
+#broken
+i=14 
 
+i=0
+print (i)
+dfGrid.loc[i,'Shape']
+i+=1
 
+i=1
+dfGrid.at[i,'Vertices']
+shapely.geometry.Polygon
+poly=shapely.geometry.Polygon(dfGrid.at[i,'Vertices'])
+list(shapely.geometry.Polygon(dfGrid.at[i,'Vertices']).exterior.coords)
+list(shapely.geometry.Polygon(dfGrid.at[i,'Vertices']).interiors)
+print(shapely.geometry.polygon.orient(poly, sign=1.0))
