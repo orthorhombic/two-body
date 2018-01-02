@@ -303,13 +303,18 @@ dfDest.loc[0,'Lon']=-75.680189
 dfDest.loc[0,'Arrival']=pandas.datetime(2018,1,9,8,15) # do not use leading zeros
 dfDest.loc[0,'Depart']=pandas.datetime(2018,1,9,17,10)
 dfDest.loc[0,'NumDays']=5
-#DC
+#Towson
 dfDest.loc[1,'Lat']=39.392512
 dfDest.loc[1,'Lon']=-76.612639
 dfDest.loc[1,'Arrival']=pandas.datetime(2018,1,9,11,15)
 dfDest.loc[1,'Depart']=pandas.datetime(2018,1,9,15,30)
-dfDest.loc[1,'NumDays']=3.5
-
+dfDest.loc[1,'NumDays']=3.56
+##Towson Northeast
+#dfDest.loc[1,'Lat']=39.564511
+#dfDest.loc[1,'Lon']=-76.289427
+#dfDest.loc[1,'Arrival']=pandas.datetime(2018,1,9,11,15)
+#dfDest.loc[1,'Depart']=pandas.datetime(2018,1,9,15,30)
+#dfDest.loc[1,'NumDays']=3.5
 
 
 
@@ -326,7 +331,7 @@ corner=[
 hypotenuse=np.sqrt((corner[0]**2+corner[1]**2)) 
 side=hypotenuse/np.sqrt(2) 
 #specify spacing for side
-spacing=np.linspace(0,side,num=7,endpoint=True)
+spacing=np.linspace(0,side,num=8,endpoint=True)
 
 #Create an initial grid 
  #Create a mesh grid
@@ -565,8 +570,13 @@ dfGrid.loc[:,(0,'Equity')]=(
             ].std(axis=1)
     )
 
-#select the smallest n commute times, extract index
-afCoarseIndex=dfGrid.loc[:,(0,'Equity')].nsmallest(4).index
+#select a few of the smallest/most equitable n commute times, extract index
+afCoarseIndex=(
+        set(dfGrid.loc[:,(0,'TotCom')].nsmallest(3).index).union(
+                set(dfGrid.loc[:,(0,'Equity')].nsmallest(3).index)
+                )
+        )
+
 
 #lat/lon
 dfGrid.loc[afCoarseIndex,(0,'GMLat')]
@@ -594,7 +604,7 @@ dfHRTemplateGrid['Lat']=dfHRTemplateGrid['RelLon']*np.sin(fTheta)+dfHRTemplateGr
 
 aHRDFs=[] #ititialize list of highres dataframes
 #pass lat/lon along and compute new high-res grid
-print(')
+print('HighRes Lines')
 for i in afCoarseIndex:
     print ('i: ',i)
     dfTempGrid=dfHRTemplateGrid.copy()
@@ -798,7 +808,7 @@ ax = plt.axes(projection=imagery.crs)
 ax.set_extent(aExtent, ccrs.Geodetic()) #longitude, latitude (x1,x2,y1,y2)
 
 # Add the imagery to the map. Later iterations will need to intellegently determine zoom level
-ax.add_image(imagery, 9) #good
+ax.add_image(imagery, 10) #good
 
 #Destinations
 plt.plot(dfDest.loc[:,'Lon'], dfDest.loc[:,'Lat'],
