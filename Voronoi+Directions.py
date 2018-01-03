@@ -331,7 +331,7 @@ corner=[
 hypotenuse=np.sqrt((corner[0]**2+corner[1]**2)) 
 side=hypotenuse/np.sqrt(2) 
 #specify spacing for side
-spacing=np.linspace(0,side,num=8,endpoint=True)
+spacing=np.linspace(0,side,num=15,endpoint=True)
 
 #Create an initial grid 
  #Create a mesh grid
@@ -570,12 +570,16 @@ dfGrid.loc[:,(0,'Equity')]=(
             ].std(axis=1)
     )
 
-#select a few of the smallest/most equitable n commute times, extract index
-afCoarseIndex=(
-        set(dfGrid.loc[:,(0,'TotCom')].nsmallest(3).index).union(
-                set(dfGrid.loc[:,(0,'Equity')].nsmallest(3).index)
-                )
-        )
+##select a few of the smallest/most equitable n commute times, extract index
+#afCoarseIndex=(
+#        set(dfGrid.loc[:,(0,'TotCom')].nsmallest(1).index).union(
+#                set(dfGrid.loc[:,(0,'Equity')].nsmallest(1).index)
+#                )
+#        )
+
+#select a few of the smallest/most equitable n commute times (average, equal weight), extract index
+afCoarseIndex=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1).nsmallest(10).index
+
 
 
 #lat/lon
@@ -754,11 +758,13 @@ dfGrid=pandas.concat([dfGrid,dfHR],ignore_index=True)
 
 #set normalized values for determining color map values
 #normval = (value-min) / (max-min)
+#dfGrid.loc[:,(0,'Norm')]=(
+#        dfGrid.loc[:,(0,'Equity')]-dfGrid.loc[:,(0,'Equity')].min()
+#        )/(dfGrid.loc[:,(0,'Equity')].max()-dfGrid.loc[:,(0,'Equity')].min())
+
 dfGrid.loc[:,(0,'Norm')]=(
-        dfGrid.loc[:,(0,'Equity')]-dfGrid.loc[:,(0,'Equity')].min()
-        )/(dfGrid.loc[:,(0,'Equity')].max()-dfGrid.loc[:,(0,'Equity')].min())
-
-
+        dfGrid.loc[:,(0,'TotCom')]-dfGrid.loc[:,(0,'TotCom')].min()
+        )/(dfGrid.loc[:,(0,'TotCom')].max()-dfGrid.loc[:,(0,'TotCom')].min())
 
 #select direction points for voronoi
 points=dfGrid.loc[:,[(0,'GMLon'),(0,'GMLat')]].copy().dropna()
