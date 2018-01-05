@@ -10,3 +10,4 @@ The python files included here are the framework to build an applicaion which ca
 * Map resolution
 
 With time, additional inputs will be set up to fine tune the output for the user's preferences
+Initial output samples are included as the attached image files.
