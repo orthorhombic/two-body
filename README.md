@@ -9,5 +9,4 @@ The python files included here are the framework to build an applicaion which ca
 * Weighting of total commute time with equity of driving distance
 * Map resolution
 
-With time, additional inputs will be set up to fine tune the output for the user's preferences
-Initial output samples are included as the attached image files.
+With time, additional inputs will be set up to fine tune the output for the user's preferences. Initial output samples are included as the attached image files.
