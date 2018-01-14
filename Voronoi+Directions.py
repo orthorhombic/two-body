@@ -14,6 +14,8 @@ from datetime import datetime
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import shapely.geometry
 import shapely.ops
+import time
+
 
 
 gmaps = googlemaps.Client(key='AIzaSyCEVlqLL37Sy3D7ASUTjiy6WxNCTtUOVNA')
@@ -300,20 +302,20 @@ dfDest=pandas.DataFrame(columns=asColumns)
 #West
 dfDest.loc[0,'Lat']=40.061341
 dfDest.loc[0,'Lon']=-75.680189
-dfDest.loc[0,'Arrival']=pandas.datetime(2018,1,9,8,15) # do not use leading zeros
-dfDest.loc[0,'Depart']=pandas.datetime(2018,1,9,17,10)
+dfDest.loc[0,'Arrival']=pandas.datetime(2018,2,6,8,15) # do not use leading zeros
+dfDest.loc[0,'Depart']=pandas.datetime(2018,2,6,17,10)
 dfDest.loc[0,'NumDays']=5
 #Towson
 dfDest.loc[1,'Lat']=39.392512
 dfDest.loc[1,'Lon']=-76.612639
-dfDest.loc[1,'Arrival']=pandas.datetime(2018,1,9,11,15)
-dfDest.loc[1,'Depart']=pandas.datetime(2018,1,9,15,30)
+dfDest.loc[1,'Arrival']=pandas.datetime(2018,2,6,11,15)
+dfDest.loc[1,'Depart']=pandas.datetime(2018,2,6,15,30)
 dfDest.loc[1,'NumDays']=3.56
 ##Towson Northeast
 #dfDest.loc[1,'Lat']=39.564511
 #dfDest.loc[1,'Lon']=-76.289427
-#dfDest.loc[1,'Arrival']=pandas.datetime(2018,1,9,11,15)
-#dfDest.loc[1,'Depart']=pandas.datetime(2018,1,9,15,30)
+#dfDest.loc[1,'Arrival']=pandas.datetime(2018,2,6,11,15)
+#dfDest.loc[1,'Depart']=pandas.datetime(2018,2,6,15,30)
 #dfDest.loc[1,'NumDays']=3.5
 
 
@@ -331,6 +333,7 @@ corner=[
 hypotenuse=np.sqrt((corner[0]**2+corner[1]**2)) 
 side=hypotenuse/np.sqrt(2) 
 #specify spacing for side
+#note: should implement dynamic scaling: between minimum useful point distance and maximum number of api calls
 spacing=np.linspace(0,side,num=15,endpoint=True)
 
 #Create an initial grid 
@@ -470,6 +473,26 @@ for i in range(len(dfGrid)): #whole df
                  traffic_model="best_guess"
                  )    
 
+        #while loop to catch errors from google maps - perhaps this should be converted into a function
+        while (
+               'overview_polyline' not in gmDir_Dtemp[0] or
+               'duration' not in gmDir_Dtemp[0]['legs'][0] or #dur in seconds
+               'duration_in_traffic' not in gmDir_Dtemp[0]['legs'][0] #dur in seconds
+               ):
+            print('Retrying in 5 seconds')        
+            time.sleep(5)
+            
+            gmDir_Dtemp = gmaps.directions(
+                    origin=(dfDest.loc[j,'Lat'],dfDest.loc[j,'Lon']), #dest   lat,lon ,or string array with address
+                    destination=(dfGrid.loc[i,(0,'CorrLat')],dfGrid.loc[i,(0,'CorrLon')]), #grid pt   lat,lon ,or string array with address
+                     mode='driving',
+                     departure_time=dfDest.loc[j,'Depart'],
+                     traffic_model="best_guess"
+                     )    
+            
+            
+            
+    
         ##store departure columns from leg 0
         #store general depart data
         dfGrid.at[i,(j,'D-Polyline')]  =(
@@ -508,6 +531,27 @@ for i in range(len(dfGrid)): #whole df
 #                 traffic_model="best_guess"
                  )    
         
+        
+        #while loop to catch errors from google maps - perhaps this should be converted into a function
+        while (
+               'overview_polyline' not in gmDir_Atemp[0] or
+               'duration' not in gmDir_Atemp[0]['legs'][0] or #dur in seconds
+               'duration_in_traffic' not in gmDir_Atemp[0]['legs'][0] #dur in seconds
+               ):
+            print('Retrying in 5 seconds')        
+            time.sleep(5)
+            gmDir_Atemp = gmaps.directions(
+                    origin=(dfGrid.loc[i,(0,'CorrLat')],dfGrid.loc[i,(0,'CorrLon')]), #grid pt   lat,lon ,or string array with address
+                    destination=(dfDest.loc[j,'Lat'],dfDest.loc[j,'Lon']), #dest   lat,lon ,or string array with address
+                     mode='driving',
+            #         #        alternatives=False
+            ##        avoid=
+            #         units='imperial',
+                     departure_time=dfDest.loc[j,'Arrival']-tdArrivalShift,
+    #                 traffic_model="best_guess"
+                     )                
+            
+
         ##store arrival columns from leg 0
         if j==0:
             #store start location
@@ -651,6 +695,24 @@ for i in range(len(dfHR)): #whole df
                  traffic_model="best_guess"
                  )    
 
+        #while loop to catch errors from google maps - perhaps this should be converted into a function
+        while (
+               'overview_polyline' not in gmDir_Dtemp[0] or
+               'duration' not in gmDir_Dtemp[0]['legs'][0] or #dur in seconds
+               'duration_in_traffic' not in gmDir_Dtemp[0]['legs'][0] #dur in seconds
+               ):
+            print('Retrying in 5 seconds')        
+            time.sleep(5)
+            
+            gmDir_Dtemp = gmaps.directions(
+                    origin=(dfDest.loc[j,'Lat'],dfDest.loc[j,'Lon']), #dest   lat,lon ,or string array with address
+                    destination=(dfGrid.loc[i,(0,'CorrLat')],dfGrid.loc[i,(0,'CorrLon')]), #grid pt   lat,lon ,or string array with address
+                     mode='driving',
+                     departure_time=dfDest.loc[j,'Depart'],
+                     traffic_model="best_guess"
+                     )    
+
+
         ##store departure columns from leg 0
         #store general depart data
         dfHR.at[i,(j,'D-Polyline')]  =(
@@ -688,6 +750,29 @@ for i in range(len(dfHR)): #whole df
                  departure_time=dfDest.loc[j,'Arrival']-tdArrivalShift,
 #                 traffic_model="best_guess"
                  )    
+        
+        
+        #while loop to catch errors from google maps - perhaps this should be converted into a function
+        while (
+               'overview_polyline' not in gmDir_Atemp[0] or
+               'duration' not in gmDir_Atemp[0]['legs'][0] or #dur in seconds
+               'duration_in_traffic' not in gmDir_Atemp[0]['legs'][0] #dur in seconds
+               ):
+            print('Retrying in 5 seconds')        
+            time.sleep(5)
+            gmDir_Atemp = gmaps.directions(
+                    origin=(dfGrid.loc[i,(0,'CorrLat')],dfGrid.loc[i,(0,'CorrLon')]), #grid pt   lat,lon ,or string array with address
+                    destination=(dfDest.loc[j,'Lat'],dfDest.loc[j,'Lon']), #dest   lat,lon ,or string array with address
+                     mode='driving',
+            #         #        alternatives=False
+            ##        avoid=
+            #         units='imperial',
+                     departure_time=dfDest.loc[j,'Arrival']-tdArrivalShift,
+    #                 traffic_model="best_guess"
+                     )                
+        
+        
+        
         
         ##store arrival columns from leg 0
         if j==0:
@@ -762,9 +847,19 @@ dfGrid=pandas.concat([dfGrid,dfHR],ignore_index=True)
 #        dfGrid.loc[:,(0,'Equity')]-dfGrid.loc[:,(0,'Equity')].min()
 #        )/(dfGrid.loc[:,(0,'Equity')].max()-dfGrid.loc[:,(0,'Equity')].min())
 
+#dfGrid.loc[:,(0,'Norm')]=(
+#        dfGrid.loc[:,(0,'TotCom')]-dfGrid.loc[:,(0,'TotCom')].min()
+#        )/(dfGrid.loc[:,(0,'TotCom')].max()-dfGrid.loc[:,(0,'TotCom')].min())
+
+
+dfToNorm=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1)
+
 dfGrid.loc[:,(0,'Norm')]=(
-        dfGrid.loc[:,(0,'TotCom')]-dfGrid.loc[:,(0,'TotCom')].min()
-        )/(dfGrid.loc[:,(0,'TotCom')].max()-dfGrid.loc[:,(0,'TotCom')].min())
+        dfToNorm-dfToNorm.min()
+        )/(dfToNorm.max()-dfToNorm.min())
+
+
+
 
 #select direction points for voronoi
 points=dfGrid.loc[:,[(0,'GMLon'),(0,'GMLat')]].copy().dropna()
