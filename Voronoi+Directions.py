@@ -310,7 +310,9 @@ dfDest.loc[1,'Lat']=39.392512
 dfDest.loc[1,'Lon']=-76.612639
 dfDest.loc[1,'Arrival']=pandas.datetime(2018,2,6,11,15)
 dfDest.loc[1,'Depart']=pandas.datetime(2018,2,6,15,30)
-dfDest.loc[1,'NumDays']=3.56
+#dfDest.loc[1,'NumDays']=3.56 #weighted by days to Towson NE
+dfDest.loc[1,'NumDays']=4
+
 ##Towson Northeast
 #dfDest.loc[1,'Lat']=39.564511
 #dfDest.loc[1,'Lon']=-76.289427
@@ -334,7 +336,8 @@ hypotenuse=np.sqrt((corner[0]**2+corner[1]**2))
 side=hypotenuse/np.sqrt(2) 
 #specify spacing for side
 #note: should implement dynamic scaling: between minimum useful point distance and maximum number of api calls
-spacing=np.linspace(0,side,num=15,endpoint=True)
+#spacing=np.linspace(0,side,num=15,endpoint=True) #seems like a good number
+spacing=np.linspace(0,side,num=20,endpoint=True)
 
 #Create an initial grid 
  #Create a mesh grid
@@ -464,6 +467,12 @@ for i in range(len(dfGrid)): #whole df
     for j in range(len(dfDest)): #whole df
         print ('j: ',j) #row of destination/column of grid
         
+        #initialize/clear vars
+        gmDir_Dtemp, gmDir_Atemp = [],[]
+        #delay to avoid rate limit
+        time.sleep(1)
+
+        
         #Compute depart directions
         gmDir_Dtemp = gmaps.directions(
                 origin=(dfDest.loc[j,'Lat'],dfDest.loc[j,'Lon']), #dest   lat,lon ,or string array with address
@@ -489,9 +498,40 @@ for i in range(len(dfGrid)): #whole df
                      departure_time=dfDest.loc[j,'Depart'],
                      traffic_model="best_guess"
                      )    
-            
-            
-            
+
+        #Experimental Code to handle exceptions
+#        while True:
+#            try:
+#                gmDir_Atemp = gmaps.directions(
+#                        origin=(dfGrid.loc[i,(0,'CorrLat')],dfGrid.loc[i,(0,'CorrLon')]), #grid pt   lat,lon ,or string array with address
+#                        destination=(dfDest.loc[j,'Lat'],dfDest.loc[j,'Lon']), #dest   lat,lon ,or string array with address
+#                         mode='driving',
+#                #         #        alternatives=False
+#                ##        avoid=
+#                #         units='imperial',
+#                         departure_time=dfDest.loc[j,'Arrival']-tdArrivalShift,
+#        #                 traffic_model="best_guess"
+#                         )     
+#                print ('Called for directions')
+#                if (
+#                   'overview_polyline' in gmDir_Atemp[0] and
+#                   'duration' in gmDir_Atemp[0]['legs'][0] and #dur in seconds
+#                   'duration_in_traffic' in gmDir_Atemp[0]['legs'][0] #dur in seconds
+#                   ):
+#                    print('Success')  
+#                    continue
+#                else:
+#                    print('Retrying in 5 seconds')        
+#                    time.sleep(5)
+#
+#            except:
+#                print('Exception: Retrying in 5 seconds')        
+#                time.sleep(5)
+#                #put if statement here for counting failures
+#                break
+#                
+#        print ('out of loop, store data')         
+        
     
         ##store departure columns from leg 0
         #store general depart data
@@ -622,7 +662,7 @@ dfGrid.loc[:,(0,'Equity')]=(
 #        )
 
 #select a few of the smallest/most equitable n commute times (average, equal weight), extract index
-afCoarseIndex=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1).nsmallest(10).index
+afCoarseIndex=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1).nsmallest(15).index
 
 
 
@@ -685,6 +725,12 @@ for i in range(len(dfHR)): #whole df
 
     for j in range(len(dfDest)): #whole df
         print ('j: ',j) #row of destination/column of grid
+
+        #initialize/clear vars
+        gmDir_Dtemp, gmDir_Atemp = [],[]
+        #delay to avoid rate limit
+        time.sleep(1)
+
         
         #Compute depart directions
         gmDir_Dtemp = gmaps.directions(
@@ -867,7 +913,9 @@ points=dfGrid.loc[:,[(0,'GMLon'),(0,'GMLat')]].copy().dropna()
 
 
 vor = Voronoi(points)
-new_regions, new_vertices = voronoi_finite_polygons_2d(vor, 0.75*spacing[1])
+new_regions, new_vertices = voronoi_finite_polygons_2d(vor, 0.6*spacing[1])
+#at some point, change this to adjust the spacing based on the next-nearest point
+#or adjust based on the grid spacing of that particular point - i.e. lower spacing if highres point
 
 #cmap = matplotlib.cm.get_cmap('viridis')
 cmap = matplotlib.cm.get_cmap('jet')
@@ -904,32 +952,53 @@ for i in range(len(points.index)): #Index of the Voronoi region for each input p
     
 ##############plotting
 imagery = OSM() # Use Open street maps data
-ax = plt.axes(projection=imagery.crs)
-#ax.set_extent([-78, -74, 38, 41], ccrs.Geodetic()) #longitude, latitude (x1,x2,y1,y2)
-ax.set_extent(aExtent, ccrs.Geodetic()) #longitude, latitude (x1,x2,y1,y2)
+fig = plt.figure(1, figsize = (4,4), dpi=300)
+
+ax1 = fig.add_subplot(111, projection=imagery.crs) #Make subplot and specify projection
+
+ax1.set_extent(aExtent, ccrs.Geodetic()) #longitude, latitude (x1,x2,y1,y2)
+fig.set_tight_layout(True)
 
 # Add the imagery to the map. Later iterations will need to intellegently determine zoom level
-ax.add_image(imagery, 10) #good
+#ax.add_image(imagery, 10) #good
+ax1.add_image(imagery, 11) #higer res
+
 
 #Destinations
-plt.plot(dfDest.loc[:,'Lon'], dfDest.loc[:,'Lat'],
-         marker='o', color='blue', markersize=9, transform=ccrs.Geodetic(),
+ax1.plot(dfDest.loc[:,'Lon'], dfDest.loc[:,'Lat'],
+         marker='o', color='blue', markersize=4, transform=ccrs.Geodetic(),
          linestyle='')
 
 #plot gm points grid
-plt.plot(dfGrid.loc[:,(0,'GMLon')],dfGrid.loc[:,(0,'GMLat')],
+ax1.plot(dfGrid.loc[:,(0,'GMLon')],dfGrid.loc[:,(0,'GMLat')],
          marker='o', color='black', markersize=1, transform=ccrs.Geodetic(),
          linestyle='')
 
-plt.plot(
+ax1.plot(
         aRoute[:,0], #x lng
         aRoute[:,1], #y lat
-         marker='o', linestyle='--', color='green', markersize=1, transform=ccrs.Geodetic()
+         marker='o', linestyle='--', color='green', markersize=0.25, transform=ccrs.Geodetic()
          )    
     
 #Plots all the regions and associated colors
-ax.add_geometries(np.array(dfGrid.loc[points.index,(0,'Shape')]), ccrs.Geodetic(),
+ax1.add_geometries(np.array(dfGrid.loc[points.index,(0,'Shape')]), ccrs.Geodetic(),
           facecolor=np.array(dfGrid.loc[points.index,(0,'Color')]), edgecolor=None)
 
 
+
+
+
+
+#run these lines after the figure has already rendered, doesn't work at same time
+'''
+#get size of the axis, and resize the figure to fit
+bbox = ax1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+width, height = bbox.width, bbox.height
+fig.set_size_inches(width,height)
+
+
+
+#save the figure
+plt.savefig('test2.png',format='png', dpi=600, pad_inches=0.1, transparent=True)
+'''
 
