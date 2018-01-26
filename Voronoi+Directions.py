@@ -999,6 +999,24 @@ fig.set_size_inches(width,height)
 
 
 #save the figure
-plt.savefig('test2.png',format='png', dpi=600, pad_inches=0.1, transparent=True)
+plt.savefig('test3.png',format='png', dpi=600, pad_inches=0.1, transparent=True)
+
+
+#store the data from the dataframes for use later - avoid going over google maps quota
+import dill
+aDill=  ([[dfGrid,'dfGrid'],
+         [aRoute,'aRoute'],
+         [dfDest,'dfDest'],
+         [dfToNorm,'dfToNorm'],
+         [gmDir_jobjob,'gmDir_jobjob']])
+
+print('Dill storage:')
+for i in range(len(aDill)):
+    print(('dills/'+aDill[i][1]+'.dill'))
+    dill.dump(aDill[i][0], open(('dills/'+aDill[i][1]+'.dill'), 'wb'))
+    
+    
+#test = dill.load(open('dills/test.dill', 'r'))
+
 '''
 
