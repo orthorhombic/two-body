@@ -145,6 +145,7 @@ def decode(point_str):
 
 
 def voronoi_finite_polygons_2d(vor, radius=None):
+    #modified from https://gist.github.com/pv/8036995
     """
     Reconstruct infinite voronoi regions in a 2D diagram to finite
     regions.
@@ -299,12 +300,20 @@ asColumns=[
 
 dfDest=pandas.DataFrame(columns=asColumns)
 
-#West
-dfDest.loc[0,'Lat']=40.061341
-dfDest.loc[0,'Lon']=-75.680189
+##West
+#dfDest.loc[0,'Lat']=40.061341
+#dfDest.loc[0,'Lon']=-75.680189
+#dfDest.loc[0,'Arrival']=pandas.datetime(2018,2,6,8,15) # do not use leading zeros
+#dfDest.loc[0,'Depart']=pandas.datetime(2018,2,6,17,10)
+#dfDest.loc[0,'NumDays']=5
+#Maryland
+dfDest.loc[0,'Lat']=39.0271834
+dfDest.loc[0,'Lon']=-76.8615301
 dfDest.loc[0,'Arrival']=pandas.datetime(2018,2,6,8,15) # do not use leading zeros
 dfDest.loc[0,'Depart']=pandas.datetime(2018,2,6,17,10)
 dfDest.loc[0,'NumDays']=5
+
+
 #Towson
 dfDest.loc[1,'Lat']=39.392512
 dfDest.loc[1,'Lon']=-76.612639
@@ -337,7 +346,7 @@ side=hypotenuse/np.sqrt(2)
 #specify spacing for side
 #note: should implement dynamic scaling: between minimum useful point distance and maximum number of api calls
 #spacing=np.linspace(0,side,num=15,endpoint=True) #seems like a good number
-spacing=np.linspace(0,side,num=20,endpoint=True)
+spacing=np.linspace(0,side,num=10,endpoint=True)
 
 #Create an initial grid 
  #Create a mesh grid
@@ -662,7 +671,7 @@ dfGrid.loc[:,(0,'Equity')]=(
 #        )
 
 #select a few of the smallest/most equitable n commute times (average, equal weight), extract index
-afCoarseIndex=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1).nsmallest(15).index
+afCoarseIndex=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1).nsmallest(8).index
 
 
 
@@ -999,7 +1008,7 @@ fig.set_size_inches(width,height)
 
 
 #save the figure
-plt.savefig('test3.png',format='png', dpi=600, pad_inches=0.1, transparent=True)
+plt.savefig('test4.png',format='png', dpi=600, pad_inches=0.1, transparent=True)
 
 
 #store the data from the dataframes for use later - avoid going over google maps quota
