@@ -269,15 +269,26 @@ for i in range(len(dfGrid)):
         #build URL
         sURL='https://www.trulia.com/for_sale/'+str(fLatMin)+','+str(fLatmax)+','+str(fLonMin)+','+str(fLonMax)+'_xy/'+str(iPage+1)+'_p/'
     
-        #read data
-        http = urllib3.PoolManager()
-        r = http.request('GET', sURL)
-        
-        
-        #select data of interest
-        reJSONsearch1=re.search(r"\"cards\":\[(.*?)\],\"currentUrl", r.data.decode(), re.DOTALL)
-        #append brackets to read into json & append dataframe
-        dfTempHousing=dfTempHousing.append(pandas.DataFrame(json.loads('['+reJSONsearch1.group(1)+']')))
+        iAttempts = 0
+        while iAttempts < 3:
+            try:
+                 #read data
+                http = urllib3.PoolManager()
+                r = http.request('GET', sURL);
+                #select data of interest
+                reJSONsearch1=re.search(r"\"cards\":\[(.*?)\],\"currentUrl", r.data.decode(), re.DOTALL)
+                #append brackets to read into json & append dataframe
+                dfTempHousing=dfTempHousing.append(pandas.DataFrame(json.loads('['+reJSONsearch1.group(1)+']')))
+                #insert delay to try and avoid issues
+                time.sleep(3)
+                break
+            except:
+                print ('data error: waiting 5 seconds to retry')
+                iAttempts += 1
+                #insert delay to try and avoid issues
+                time.sleep(5)
+    
+    
     
     dfTempHousing.reset_index(inplace=True)
             
@@ -305,8 +316,8 @@ for i in range(len(dfGrid)):
     dfTempHousing=(dfTempHousing.loc[(dfTempHousing.loc[:,'InPoly']==True),:])
     
     #fix values to floats
-    dfTempHousing.loc[:,'price']=pandas.to_numeric(dfTempHousing.loc[:,'price'].replace({'\$': '', ',': ''}, regex=True))
-    dfTempHousing.loc[:,'sqft']=pandas.to_numeric(dfTempHousing.loc[:,'sqft'].replace({' sqft': '', ',': ''}, regex=True))
+    dfTempHousing.loc[:,'price']=pandas.to_numeric(dfTempHousing.loc[:,'price'].replace({'\$': '','\+': '', ',': ''}, regex=True),errors='coerce')
+    dfTempHousing.loc[:,'sqft']=pandas.to_numeric(dfTempHousing.loc[:,'sqft'].replace({' sqft': '', ',': ''}, regex=True), errors='coerce')
     len(dfTempHousing)
     
     #compute basic stats
@@ -318,6 +329,11 @@ for i in range(len(dfGrid)):
 
 
 
+
+
+
+##show head of dfGrid
+dfGrid.loc[:,(0,['CorrLat','CorrLon','MedianCost','Count'])].head()
 
 
 
@@ -369,15 +385,16 @@ ax.plot(
 
 
 
+(dfTempHousing.loc[:,'tags']!=r'[\'Buildable Plan\']')
 
 
+'Buildable Plan'.isin(dfTempHousing.loc[:,'tags'])
 
+(dfTempHousing.loc[66,'tags']).isin('Buildable Plan')
 
+(dfTempHousing.loc[:,'tags']).isin(['Buildable Plan'])
 
-
-
-
-
+(dfTempHousing.loc[:,'tags'])==[['Buildable Plan']]*len(dfTempHousing)
 
 
 
