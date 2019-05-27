@@ -3,3 +3,7 @@
 
 subaru_parse_v7.py
 test.py
+*.png
+*.dill
+*.dill
+dills/2019-03-24/Config.txt

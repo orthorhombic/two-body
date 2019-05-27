@@ -5,7 +5,7 @@ import matplotlib
 import numpy as np
 import cartopy
 import cartopy.crs as ccrs
-from cartopy.io.img_tiles import OSM
+import cartopy.io.img_tiles as cimgt
 import pandas
 import matplotlib
 import seaborn
@@ -15,11 +15,9 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 import shapely.geometry
 import shapely.ops
 import time
-
-
-
-gmaps = googlemaps.Client(key='AIzaSyCEVlqLL37Sy3D7ASUTjiy6WxNCTtUOVNA')
-
+#enable/disable api
+#https://console.cloud.google.com/google/maps-apis/apis/directions-backend.googleapis.com/metrics?project=two-body&duration=PT1H
+gmaps = googlemaps.Client(key=sKey)
 
 #Decode polyline from route to plot
 #https://gist.github.com/signed0/2031157
@@ -307,20 +305,20 @@ dfDest=pandas.DataFrame(columns=asColumns)
 #dfDest.loc[0,'Depart']=pandas.datetime(2018,2,6,17,10)
 #dfDest.loc[0,'NumDays']=5
 #Maryland
-dfDest.loc[0,'Lat']=39.0271834
-dfDest.loc[0,'Lon']=-76.8615301
-dfDest.loc[0,'Arrival']=pandas.datetime(2018,2,6,8,15) # do not use leading zeros
-dfDest.loc[0,'Depart']=pandas.datetime(2018,2,6,17,10)
+dfDest.loc[0,'Lat']=39.1644105
+dfDest.loc[0,'Lon']=-76.8902153
+dfDest.loc[0,'Arrival']=pandas.datetime(2019,5,16,8,15) # do not use leading zeros
+dfDest.loc[0,'Depart']=pandas.datetime(2019,5,16,17,10)
 dfDest.loc[0,'NumDays']=5
 
 
 #Towson
 dfDest.loc[1,'Lat']=39.392512
 dfDest.loc[1,'Lon']=-76.612639
-dfDest.loc[1,'Arrival']=pandas.datetime(2018,2,6,11,15)
-dfDest.loc[1,'Depart']=pandas.datetime(2018,2,6,15,30)
+dfDest.loc[1,'Arrival']=pandas.datetime(2019,5,16,10,00)
+dfDest.loc[1,'Depart']=pandas.datetime(2019,5,16,17,00)
 #dfDest.loc[1,'NumDays']=3.56 #weighted by days to Towson NE
-dfDest.loc[1,'NumDays']=4
+dfDest.loc[1,'NumDays']=5
 
 ##Towson Northeast
 #dfDest.loc[1,'Lat']=39.564511
@@ -346,7 +344,7 @@ side=hypotenuse/np.sqrt(2)
 #specify spacing for side
 #note: should implement dynamic scaling: between minimum useful point distance and maximum number of api calls
 #spacing=np.linspace(0,side,num=15,endpoint=True) #seems like a good number
-spacing=np.linspace(0,side,num=10,endpoint=True)
+spacing=np.linspace(0,side,num=9,endpoint=True)
 
 #Create an initial grid 
  #Create a mesh grid
@@ -458,7 +456,7 @@ indNew=pandas.MultiIndex(
                 [0],
                 dfGrid.columns
                 ], #outside/first, inside/second (names)
-        labels= [
+        codes= [
                 [0]*len(dfGrid.columns),
                 [0,1,2,3,4,5]
                 ],#array of level indicies corresponding to data
@@ -671,7 +669,7 @@ dfGrid.loc[:,(0,'Equity')]=(
 #        )
 
 #select a few of the smallest/most equitable n commute times (average, equal weight), extract index
-afCoarseIndex=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1).nsmallest(8).index
+afCoarseIndex=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1).nsmallest(9).index
 
 
 
@@ -957,21 +955,71 @@ for i in range(len(points.index)): #Index of the Voronoi region for each input p
     #dfGrid.at[i,'Color']=cmap(dfGrid.loc[i,'Value'],alpha=0.25) #no normalization (no good)
     dfGrid.at[j,(0,'Color')]=cmap(dfGrid.loc[j,(0,'Norm')],alpha=0.35) #Normalization (required)
     
+
+
+## Color change
+    '''
+cmap = matplotlib.cm.get_cmap('jet')
+
+dfToNorm=dfGrid.loc[:,[(0,'TotCom'),(0,'Equity')]].mean(axis=1)
+dfToNorm=dfGrid.loc[:,(0,'TotCom')]
+dfGrid.loc[:,(0,'Norm')]=(
+        dfToNorm-dfToNorm.min()
+        )/(dfToNorm.max()-dfToNorm.min())
+
+for i in range(len(points.index)): #Index of the Voronoi region for each input point
+    j=points.index[i] #specify index of the point being evaluated
+    dfGrid.at[j,(0,'Color')]=cmap(dfGrid.loc[j,(0,'Norm')],alpha=0.35) #Normalization (required)
     
+fBuffer=0.04 #buffer % of difference
+
+aExtent=[
+        fMinLon-fDeltalon*fBuffer,
+        fMaxLon+fDeltalon*fBuffer,
+        fMinLat-fDeltalat*fBuffer,
+        fMaxLat+fDeltalat*fBuffer,
+        ]    
+
+aExtent=[ #shrink
+        fMinLon+fDeltalon*fBuffer,
+        fMaxLon-fDeltalon*fBuffer,
+        fMinLat+fDeltalat*fBuffer,
+        fMaxLat-fDeltalat*fBuffer,
+        ]    
+    '''
+    
+#list of annotations
+dfGrid.loc[:,(0,'DailyMinutes')]= (dfGrid.loc[:,(0,'A-dur_traffic')]+ dfGrid.loc[:,(0,'D-dur_traffic')])/60
+dfGrid.loc[:,(1,'DailyMinutes')]= (dfGrid.loc[:,(1,'A-dur_traffic')]+ dfGrid.loc[:,(1,'D-dur_traffic')])/60
+dfGrid.loc[:,(0,'Annotate')]=(
+        dfGrid.loc[:,(0,'DailyMinutes')].map('{:,.0f}'.format).astype(str)+'/'+
+        dfGrid.loc[:,(1,'DailyMinutes')].map('{:,.0f}'.format).astype(str)
+        )
+dfGrid.loc[:,(0,'DailyMinutes')]= (dfGrid.loc[:,(0,'A-dur')]+ dfGrid.loc[:,(0,'D-dur_traffic')])/60
+dfGrid.loc[:,(1,'DailyMinutes')]= (dfGrid.loc[:,(1,'A-dur')]+ dfGrid.loc[:,(1,'D-dur_traffic')])/60
+dfGrid.loc[:,(0,'AnnotateNoTraf')]=(
+        dfGrid.loc[:,(0,'DailyMinutes')].map('{:,.0f}'.format).astype(str)+'/'+
+        dfGrid.loc[:,(1,'DailyMinutes')].map('{:,.0f}'.format).astype(str)
+        )
     
 ##############plotting
-imagery = OSM() # Use Open street maps data
-fig = plt.figure(1, figsize = (4,4), dpi=300)
+#imagery = cimgt.OSM() # Use Open street maps data
+fig = plt.figure(1, figsize = (4,5), dpi=200)
 
 ax1 = fig.add_subplot(111, projection=imagery.crs) #Make subplot and specify projection
 
 ax1.set_extent(aExtent, ccrs.Geodetic()) #longitude, latitude (x1,x2,y1,y2)
-fig.set_tight_layout(True)
+#fig.set_tight_layout(True)
 
 # Add the imagery to the map. Later iterations will need to intellegently determine zoom level
-#ax.add_image(imagery, 10) #good
-ax1.add_image(imagery, 11) #higer res
+#ax1.add_image(imagery, 10) #good
+#ax1.add_image(imagery, 12) #higer res
+#ax1.add_image(imagery, 14) #higer res
 
+#request = cimgt.OSM()
+request = cimgt.GoogleTiles()
+
+ax1.add_image(request, 13, interpolation='spline36')
 
 #Destinations
 ax1.plot(dfDest.loc[:,'Lon'], dfDest.loc[:,'Lat'],
@@ -983,18 +1031,68 @@ ax1.plot(dfGrid.loc[:,(0,'GMLon')],dfGrid.loc[:,(0,'GMLat')],
          marker='o', color='black', markersize=1, transform=ccrs.Geodetic(),
          linestyle='')
 
-ax1.plot(
-        aRoute[:,0], #x lng
-        aRoute[:,1], #y lat
-         marker='o', linestyle='--', color='green', markersize=0.25, transform=ccrs.Geodetic()
-         )    
+#plot annotations https://stackoverflow.com/questions/25416600/why-the-annotate-worked-unexpected-here-in-cartopy
+# ha - horizontal alignment
+#va - vertical alignment
+transform = ccrs.Geodetic()._as_mpl_transform(ax1)
+
+for i in range(len(dfGrid)):
+    ax1.annotate(dfGrid.loc[i,(0,'Annotate')],
+            (dfGrid.loc[i,(0,'GMLon')],dfGrid.loc[i,(0,'GMLat')]),
+            xytext=(0, -1.5), textcoords='offset points',
+            xycoords=transform,
+            ha='center', va='top',
+             color='black',
+             fontsize=2
+             )
+
+##plot regular points grid
+#ax1.plot(dfGrid.loc[:,(0,'CorrLon')],dfGrid.loc[:,(0,'CorrLat')],
+#         marker='o', color='green', markersize=1, transform=ccrs.Geodetic(),
+#         linestyle='')
+
+#ax1.plot(
+#        aRoute[:,0], #x lng
+#        aRoute[:,1], #y lat
+#         marker='o', linestyle='--', color='green', markersize=0.1, linewidth=0.1, transform=ccrs.Geodetic()
+#         )    
+
+
     
 #Plots all the regions and associated colors
 ax1.add_geometries(np.array(dfGrid.loc[points.index,(0,'Shape')]), ccrs.Geodetic(),
           facecolor=np.array(dfGrid.loc[points.index,(0,'Color')]), edgecolor=None)
 
+fig.suptitle('Total Daily Drive Time by Location (min)', fontsize=8)
+fig.subplots_adjust(top=0.92, bottom= 0.01, left=0.01, right=0.99)
+ax1.set_title('Color: Equal Weighting of Time and Equality', fontsize=6)
+fig.set_tight_layout(False)
 
 
+
+#plots all other routes:
+
+afBestIndex=dfGrid.loc[:,(0,'Norm')].nsmallest(35).index
+aaRoute=[]
+for i in afBestIndex:
+    aaRoute.append(np.array(decode(dfGrid.loc[i,(0,'A-Polyline')])))
+    aaRoute.append(np.array(decode(dfGrid.loc[i,(0,'D-Polyline')])))
+    aaRoute.append(np.array(decode(dfGrid.loc[i,(1,'A-Polyline')])))
+    aaRoute.append(np.array(decode(dfGrid.loc[i,(1,'D-Polyline')])))
+
+for j in aaRoute:
+    ax1.plot(
+        j[:,0], #x lng
+        j[:,1], #y lat
+        linestyle=':', color='black', linewidth=0.2, transform=ccrs.Geodetic()
+         )    
+
+#direct Route
+ax1.plot(
+        aRoute[:,0], #x lng
+        aRoute[:,1], #y lat
+        linestyle='--', color='green', linewidth=0.8, transform=ccrs.Geodetic()
+         )    
 
 
 
@@ -1008,13 +1106,14 @@ fig.set_size_inches(width,height)
 
 
 #save the figure
-plt.savefig('test4.png',format='png', dpi=600, pad_inches=0.1, transparent=True)
+plt.savefig('2019-05-09 gmaps13_newtimes_WithRoutes.png',format='png', dpi=600, pad_inches=0.1, transparent=True)
 
 
 #store the data from the dataframes for use later - avoid going over google maps quota
 import dill
 aDill=  ([[dfGrid,'dfGrid'],
          [aRoute,'aRoute'],
+         [aExtent,'aExtent'],
          [dfDest,'dfDest'],
          [dfToNorm,'dfToNorm'],
          [gmDir_jobjob,'gmDir_jobjob']])
@@ -1024,8 +1123,24 @@ for i in range(len(aDill)):
     print(('dills/'+aDill[i][1]+'.dill'))
     dill.dump(aDill[i][0], open(('dills/'+aDill[i][1]+'.dill'), 'wb'))
     
+import dill
     
-#test = dill.load(open('dills/test.dill', 'r'))
+dfGrid = dill.load(open('dills/dfGrid.dill', 'rb'))
+aRoute = dill.load(open('dills/aRoute.dill', 'rb'))
+aExtent = dill.load(open('dills/aExtent.dill', 'rb'))
+dfDest = dill.load(open('dills/dfDest.dill', 'rb'))
+dfToNorm = dill.load(open('dills/dfToNorm.dill', 'rb'))
+gmDir_jobjob = dill.load(open('dills/gmDir_jobjob.dill', 'rb'))
+
+dfGrid = dill.load(open('dills/2019-02-24/dfGrid.dill', 'rb'))
+aRoute = dill.load(open('dills/2019-02-24/aRoute.dill', 'rb'))
+dfDest = dill.load(open('dills/2019-02-24/dfDest.dill', 'rb'))
+dfToNorm = dill.load(open('dills/2019-02-24/dfToNorm.dill', 'rb'))
+gmDir_jobjob = dill.load(open('dills/gmDir_jobjob.dill', 'rb'))
+
+
+test = dill.load(open('dills/test.dill', 'r'))
 
 '''
+
 
